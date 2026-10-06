@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>國小四年級社會科：五大地形雙人拔河 PK 戰</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Noto+Sans+TC:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .score-font {
+      font-family: 'Chakra Petch', sans-serif;
+    }
+    .rope-shadow {
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .animate-pulse-ring {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+    /* 自訂答題選項按鈕浮動反饋 */
+    .option-btn {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .option-btn:active {
+      transform: scale(0.96);
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+  <header class="bg-slate-800/90 border-b border-slate-700 backdrop-blur-md px-4 py-2.5 flex items-center justify-between sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">⛰️</span>
+      <div>
+        <h1 class="font-extrabold text-lg sm:text-xl tracking-wide bg-gradient-to-r from-amber-400 via-orange-300 to-yellow-200 bg-clip-text text-transparent">
+          五大地形：力拔山河雙人 PK 賽
+        </h1>
+        <p class="text-xs text-slate-400 hidden sm:block">四年級社會科五大地形探索：平原、盆地、台地、丘陵、山地</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <button id="soundToggleBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-slate-200 transition">
+        <span id="soundIcon">🔊</span>
+        <span id="soundText" class="hidden sm:inline">音效開</span>
+      </button>
+      <button id="resetGameBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white shadow-md transition">
+        <span>🔄</span>
+        <span>重新開局</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-2 sm:p-4 gap-3">
+    <!-- 頂部 Canvas 拔河舞台區 -->
+    <div class="relative w-full bg-slate-950 rounded-2xl border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col items-center">
+      <!-- 狀態儀表板 -->
+      <div class="w-full grid grid-cols-3 px-4 py-2 bg-slate-900/90 border-b border-slate-800 text-xs sm:text-sm font-bold z-10">
+        <div class="flex items-center gap-2 text-cyan-400">
+          <span class="w-3 h-3 rounded-full bg-cyan-500 animate-ping"></span>
+          <span>藍隊 (P1)</span>
+          <span id="p1ScoreBadge" class="score-font ml-1 px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-700">0 分</span>
+        </div>
+        <div class="text-center text-slate-300 flex items-center justify-center gap-1">
+          <span class="text-amber-400">🚩 拔河標線</span>
+          <span id="matchTension" class="text-xs font-normal text-slate-400">拔河拉鋸中</span>
+        </div>
+        <div class="flex items-center justify-end gap-2 text-rose-400">
+          <span id="p2ScoreBadge" class="score-font mr-1 px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-700">0 分</span>
+          <span>紅隊 (P2)</span>
+          <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+        </div>
+      </div>
+
+      <!-- Canvas 拔河主畫面 -->
+      <div class="w-full relative h-[180px] sm:h-[220px] md:h-[250px]">
+        <canvas id="tugCanvas" class="w-full h-full block"></canvas>
+        <div id="canvasFxOverlay" class="pointer-events-none absolute inset-0 flex items-center justify-center"></div>
+      </div>
+    </div>
+
+    <!-- 左右雙人題目對戰區 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 flex-1">
+      
+      <!-- 左邊：玩家 1 (藍隊) 面板 -->
+      <section class="bg-slate-800/90 rounded-2xl border-2 border-cyan-500/60 p-3 sm:p-4 flex flex-col justify-between shadow-lg shadow-cyan-950/30 relative">
+        <div class="absolute -top-3 left-4 bg-cyan-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow">
+          PLAYER 1 ・ 藍隊小勇士
+        </div>
+
+        <div>
+          <!-- 進度與難度標籤 -->
+          <div class="flex items-center justify-between mt-1 mb-2">
+            <span id="p1ProgressText" class="text-xs font-bold text-cyan-300">第 1 / 10 題</span>
+            <span id="p1DifficultyBadge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700">
+              基礎概念
+            </span>
+          </div>
+          <!-- 題目文字卡片 -->
+          <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-3 sm:p-4 min-h-[95px] flex items-center shadow-inner relative overflow-hidden">
+            <p id="p1QuestionText" class="text-sm sm:text-base font-bold text-slate-100 leading-relaxed">
+              題目載入中...
+            </p>
+            <div id="p1FeedbackAnimation" class="absolute inset-0 bg-cyan-500/20 pointer-events-none opacity-0 transition-opacity duration-300 flex items-center justify-center text-2xl font-black text-cyan-300">
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 個選項按鈕 -->
+        <div id="p1OptionsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+          <!-- 動態生成按鈕 -->
+        </div>
+
+        <!-- 題型小提示 -->
+        <div class="mt-2 text-[11px] text-slate-400 flex items-center justify-between border-t border-slate-700/60 pt-1.5">
+          <span>💡 每答對一題，藍隊立即向左發力拔河！</span>
+          <span id="p1Streak" class="text-cyan-400 font-bold">連對 0 題</span>
+        </div>
+      </section>
+
+      <!-- 右邊：玩家 2 (紅隊) 面板 -->
+      <section class="bg-slate-800/90 rounded-2xl border-2 border-rose-500/60 p-3 sm:p-4 flex flex-col justify-between shadow-lg shadow-rose-950/30 relative">
+        <div class="absolute -top-3 right-4 bg-rose-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow">
+          PLAYER 2 ・ 紅隊小勇士
+        </div>
+
+        <div>
+          <!-- 進度與難度標籤 -->
+          <div class="flex items-center justify-between mt-1 mb-2">
+            <span id="p2ProgressText" class="text-xs font-bold text-rose-300">第 1 / 10 題</span>
+            <span id="p2DifficultyBadge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-700">
+              基礎概念
+            </span>
+          </div>
+          <!-- 題目文字卡片 -->
+          <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-3 sm:p-4 min-h-[95px] flex items-center shadow-inner relative overflow-hidden">
+            <p id="p2QuestionText" class="text-sm sm:text-base font-bold text-slate-100 leading-relaxed">
+              題目載入中...
+            </p>
+            <div id="p2FeedbackAnimation" class="absolute inset-0 bg-rose-500/20 pointer-events-none opacity-0 transition-opacity duration-300 flex items-center justify-center text-2xl font-black text-rose-300">
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 個選項按鈕 -->
+        <div id="p2OptionsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+          <!-- 動態生成按鈕 -->
+        </div>
+
+        <!-- 題型小提示 -->
+        <div class="mt-2 text-[11px] text-slate-400 flex items-center justify-between border-t border-slate-700/60 pt-1.5">
+          <span>💡 每答對一題，紅隊立即向右發力拔河！</span>
+          <span id="p2Streak" class="text-rose-400 font-bold">連對 0 題</span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div id="victoryModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+    <div class="bg-slate-800 border-2 border-amber-400 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl relative transform scale-95 transition-all duration-300">
+      <div id="winnerCrown" class="text-6xl mb-2 animate-bounce">🏆</div>
+      <h2 id="winnerTitle" class="text-2xl sm:text-3xl font-black text-amber-300 mb-1">藍隊獲勝！力拔山河！</h2>
+      <p id="winnerDesc" class="text-sm text-slate-300 mb-4">實力非凡！精準掌握了五大地形的各項特徵！</p>
+      
+      <!-- 成績比較表 -->
+      <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-700 mb-5 text-xs sm:text-sm">
+        <div class="flex justify-between py-1 border-b border-slate-800 text-cyan-300">
+          <span>藍隊答對題數</span>
+          <span id="finalP1Score" class="font-bold">0 / 10 題</span>
+        </div>
+        <div class="flex justify-between py-1 text-rose-300">
+          <span>紅隊答對題數</span>
+          <span id="finalP2Score" class="font-bold">0 / 10 題</span>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button id="modalRestartBtn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-extrabold text-white shadow-lg transition">
+          再來一場大對決！
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 音效管理模組（使用 Tone.js 程式合成，無外部依賴）
+    let soundEnabled = true;
+    let synth = null;
+    let noiseSynth = null;
+
+    function initAudio() {
+      if (!synth && window.Tone) {
+        try {
+          synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.4 }
+          }).toDestination();
+          synth.volume.value = -8;
+
+          noiseSynth = new Tone.MembraneSynth().toDestination();
+          noiseSynth.volume.value = -6;
+        } catch (e) {
+          console.warn("音訊初始化略過", e);
+        }
+      }
+    }
+
+    function playPullSound() {
+      if (!soundEnabled) return;
+      initAudio();
+      try {
+        if (noiseSynth) noiseSynth.triggerAttackRelease("C2", "8n");
+      } catch (e) {}
+    }
+
+    function playCorrectSound() {
+      if (!soundEnabled) return;
+      initAudio();
+      try {
+        if (synth) {
+          synth.triggerAttackRelease(["E5", "G5", "C6"], "16n");
+        }
+      } catch (e) {}
+    }
+
+    function playWrongSound() {
+      if (!soundEnabled) return;
+      initAudio();
+      try {
+        if (synth) {
+          synth.triggerAttackRelease(["C3", "F#3"], "8n");
+        }
+      } catch (e) {}
+    }
+
+    function playVictoryFanfare() {
+      if (!soundEnabled) return;
+      initAudio();
+      try {
+        if (synth) {
+          const now = Tone.now();
+          synth.triggerAttackRelease("C5", "8n", now);
+          synth.triggerAttackRelease("E5", "8n", now + 0.15);
+          synth.triggerAttackRelease("G5", "8n", now + 0.3);
+          synth.triggerAttackRelease("C6", "4n", now + 0.45);
+        }
+      } catch (e) {}
+    }
+  </script>
+
+  <script>
+    /* 
+      10 題由淺入深的精心設計題庫：
+      五大地形：平原、盆地、台地、丘陵、山地
+      藍隊 (P1) 與紅隊 (P2) 題目內容完全不同，公平且涵蓋課本深淺層次。
+    */
+
+    // 玩家 1 (藍隊) 10 題題庫
+    const questionsP1 = [
+      {
+        level: "基礎記憶",
+        badge: "入門記憶",
+        text: "下列哪一種地形的主要特徵是「地勢低平廣闊，幾乎沒有明顯的高低起伏」？",
+        options: ["山地", "平原", "台地", "丘陵"],
+        correct: 1,
+        explain: "平原地勢平坦寬闊，海拔通常較低。"
+      },
+      {
+        level: "基礎記憶",
+        badge: "地貌觀察",
+        text: "四周地勢高高隆起，中間地勢卻明顯低陷平緩，像個大臉盆一樣的地形是？",
+        options: ["台地", "丘陵", "盆地", "山地"],
+        correct: 2,
+        explain: "四周高、中間低是盆地的典型特徵。"
+      },
+      {
+        level: "理解辨識",
+        badge: "高度判斷",
+        text: "小智爬山時發現海拔已經超過 1000 公尺，而且坡度很陡、山峰聳立，這是？",
+        options: ["丘陵", "平原", "山地", "台地"],
+        correct: 2,
+        explain: "海拔通常在1000公尺以上且地勢險峻的高地為山地。"
+      },
+      {
+        level: "理解辨識",
+        badge: "外觀比較",
+        text: "外表看起來地勢較高，但「頂部平坦如桌面，邊緣有明顯陡坡」的地形是？",
+        options: ["台地", "盆地", "平原", "丘陵"],
+        correct: 0,
+        explain: "台地的特點就是頂面平坦開闊、四周有明顯邊坡。"
+      },
+      {
+        level: "生活應用",
+        badge: "農業生產",
+        text: "臺灣西部的嘉南平原地勢平坦、土壤肥沃，最適合進行哪一種產業活動？",
+        options: ["高山採茶", "大規模稻作農耕", "採伐高山林木", "建造高山滑雪場"],
+        correct: 1,
+        explain: "平原地形平坦水源豐沛，是臺灣主要的農業穀倉。"
+      },
+      {
+        level: "生活應用",
+        badge: "地形實例",
+        text: "苗栗縣有許多坡度較緩、高度在一千公尺以下連綿起伏的小山坡，常種植茶樹，此地形為？",
+        options: ["平原", "盆地", "台地", "丘陵"],
+        correct: 3,
+        explain: "坡度緩和、高度在千米以下的高低起伏地帶即為丘陵。"
+      },
+      {
+        level: "綜合分析",
+        badge: "名勝地名",
+        text: "臺灣的首都「臺北市」坐落在群山環繞的中央低窪平地上，其主要地形是？",
+        options: ["臺北平原", "臺北台地", "臺北盆地", "臺北山地"],
+        correct: 2,
+        explain: "臺北市位於臺北盆地中。"
+      },
+      {
+        level: "綜合分析",
+        badge: "交通開發",
+        text: "在五大地形中，哪一種地形最容易開發鋪設四通八達的鐵公路網，都市最密集？",
+        options: ["山地", "平原", "丘陵", "以上皆相同"],
+        correct: 1,
+        explain: "平原地勢平坦無阻礙，交通建設成本最低，都市聚落最繁榮。"
+      },
+      {
+        level: "高層次思考",
+        badge: "自然生態",
+        text: "為什麼臺灣的山地地形雖然不適合蓋大量房屋，卻對我們非常重要？",
+        options: ["因為可以開滿工廠", "因為涵養珍貴水源並保育豐富動植物", "因為可以隨意丟棄垃圾", "因為地勢低容易排水"],
+        correct: 1,
+        explain: "山地是臺灣的天然綠色水庫，涵養水源並保護生物多樣性。"
+      },
+      {
+        level: "高層次思考",
+        badge: "地圖讀圖",
+        text: "在地形剖面圖上，若看到「高度在 500 公尺左右，頂部平直，邊緣垂直下降」，這是？",
+        options: ["台地", "平原", "山地", "盆地"],
+        correct: 0,
+        explain: "台地頂部平坦高起，側面有顯著陡坡崖壁。"
+      }
+    ];
+
+    // 玩家 2 (紅隊) 10 題題庫
+    const questionsP2 = [
+      {
+        level: "基礎記憶",
+        badge: "入門記憶",
+        text: "五大地形中，地表高低起伏最大、地勢險峻且海拔常常在 1000 公尺以上的是？",
+        options: ["平原", "台地", "山地", "丘陵"],
+        correct: 2,
+        explain: "山地海拔最高且地勢最為陡峭聳立。"
+      },
+      {
+        level: "基礎記憶",
+        badge: "形狀比喻",
+        text: "地貌邊緣看起來像一圈高聳的碗緣，中間較平的底部聚集許多居民，這種地形是？",
+        options: ["盆地", "平原", "台地", "丘陵"],
+        correct: 0,
+        explain: "盆地就如同一隻四周高起的大碗或盆子。"
+      },
+      {
+        level: "理解辨識",
+        badge: "起伏比較",
+        text: "有些地方地勢雖然有連續的高低起伏，但坡度緩和、高度多在一千公尺以內，這是？",
+        options: ["山地", "丘陵", "平原", "台地"],
+        correct: 1,
+        explain: "丘陵是波狀起伏的小山丘，起伏程度較山地小許多。"
+      },
+      {
+        level: "理解辨識",
+        badge: "桌面地形",
+        text: "桃園有許多地方過去是古老的沖積扇，後來被抬升形成「上方平如平台」的地面，稱為？",
+        options: ["桃園山地", "桃園丘陵", "桃園台地", "桃園盆地"],
+        correct: 2,
+        explain: "桃園台地即是頂部平坦的高起地形代表。"
+      },
+      {
+        level: "生活應用",
+        badge: "生活環境",
+        text: "臺灣許多大城市（如高雄、臺南大部分精華區）多分布在哪種地形，生活機能最好？",
+        options: ["山地", "丘陵", "平原", "台地頂端"],
+        correct: 2,
+        explain: "平原地勢平緩，人口聚集最多，工商生活機能最完善。"
+      },
+      {
+        level: "生活應用",
+        badge: "南投名勝",
+        text: "南投縣的「埔里」四周都被高山包圍，氣候涼爽、自成一個聚落天地，埔里是著名的？",
+        options: ["埔里平原", "埔里盆地", "埔里台地", "埔里丘陵"],
+        correct: 1,
+        explain: "南投埔里是臺灣非常典型的內陸山間盆地。"
+      },
+      {
+        level: "綜合分析",
+        badge: "農業景觀",
+        text: "在臺灣的丘陵坡地上，常看到農民開闢成「一階一階的梯田」或種茶，主要原因是？",
+        options: ["為了讓汽車爬上去", "順應坡度減緩水土流失並充分利用坡地", "為了防止野生動物下山", "純粹為了拍照好看"],
+        correct: 1,
+        explain: "丘陵具一定坡度，依地勢開闢梯田有助於水土保持與種植茶樹果樹。"
+      },
+      {
+        level: "綜合分析",
+        badge: "避暑勝地",
+        text: "夏天大家喜歡到阿里山、清境農場避暑，是因為在「山地地形」中，氣溫通常會如何？",
+        options: ["高度越高氣溫越低", "高度越高氣溫越高", "溫度跟平地完全相同", "山頂每天都會沸騰"],
+        correct: 0,
+        explain: "海拔每升高1000公尺，氣溫平均下降約6度，因此高山涼爽宜人。"
+      },
+      {
+        level: "高層次思考",
+        badge: "防範災害",
+        text: "住在山地或坡度陡峭的丘陵地區，在颱風豪雨來臨時最需要特別防範哪種天然災害？",
+        options: ["海水倒灌", "土石流與山崩落石", "沙塵暴", "火山爆發噴出岩漿"],
+        correct: 1,
+        explain: "陡峭山坡受豪雨沖刷極易發生崩塌與土石流。"
+      },
+      {
+        level: "高層次思考",
+        badge: "土地利用",
+        text: "林口和臺中大肚山頂部平坦，原本取水不易，現代已發展成繁華新市鎮或科學園區，它們是？",
+        options: ["平原", "台地", "盆地", "深山"],
+        correct: 1,
+        explain: "林口台地、大肚台地因頂部平整寬闊，現代克服水利後大量開發聚落。"
+      }
+    ];
+  </script>
+
+  <script>
+    // 遊戲物理與 Canvas 狀態
+    const canvas = document.getElementById('tugCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 遊戲狀態變數
+    let ropePosition = 0; // 0 為中線；-100 為藍方勝；+100 為紅方勝
+    let targetRopePos = 0; // 平滑插值目標
+    let particles = [];
+    let isGameOver = false;
+
+    // 玩家進度
+    let p1Index = 0;
+    let p1Score = 0;
+    let p1Streak = 0;
+
+    let p2Index = 0;
+    let p2Score = 0;
+    let p2Streak = 0;
+
+    // 調整 Canvas 解析度與響應式
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // 粒子類別（答對回饋爆發）
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 6 + 2;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed - 2;
+        this.size = Math.random() * 6 + 3;
+        this.alpha = 1;
+        this.life = 0.94;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.18; // 重力
+        this.alpha *= this.life;
+        this.size *= 0.96;
+      }
+      draw(c) {
+        c.save();
+        c.globalAlpha = Math.max(0, this.alpha);
+        c.fillStyle = this.color;
+        c.beginPath();
+        c.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
+    }
+
+    function createExplosion(x, y, color) {
+      for (let i = 0; i < 28; i++) {
+        particles.push(new Particle(x, y, color));
+      }
+    }
+
+    // 繪製小人隊員
+    function drawTugPlayer(c, x, y, isLeft, color, pullPower) {
+      c.save();
+      c.translate(x, y);
+
+      // 向後傾斜角度（拉力越強傾斜越大）
+      const lean = isLeft ? -0.28 - pullPower * 0.15 : 0.28 + pullPower * 0.15;
+      c.rotate(lean);
+
+      // 身體
+      c.fillStyle = color;
+      c.beginPath();
+      c.roundRect(-10, -28, 20, 32, 6);
+      c.fill();
+
+      // 頭部
+      c.fillStyle = '#ffdfba';
+      c.beginPath();
+      c.arc(0, -42, 11, 0, Math.PI * 2);
+      c.fill();
+
+      // 頭帶
+      c.fillStyle = isLeft ? '#06b6d4' : '#f43f5e';
+      c.fillRect(-10, -48, 20, 5);
+
+      // 眼睛
+      c.fillStyle = '#1e293b';
+      const eyeOffset = isLeft ? -3 : 3;
+      c.beginPath();
+      c.arc(eyeOffset, -42, 2, 0, Math.PI * 2);
+      c.fill();
+
+      // 手臂（抓住繩子）
+      c.strokeStyle = '#ffdfba';
+      c.lineWidth = 5;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(-6, -20);
+      c.lineTo(isLeft ? 14 : -14, -8);
+      c.stroke();
+
+      // 雙腳
+      c.strokeStyle = '#334155';
+      c.lineWidth = 6;
+      c.beginPath();
+      c.moveTo(-6, 4);
+      c.lineTo(-12, 24);
+      c.moveTo(6, 4);
+      c.lineTo(isLeft ? -2 : 14, 24);
+      c.stroke();
+
+      c.restore();
+    }
+  </script>
+
+  <script>
+    let animTime = 0;
+
+    function renderTugGame() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+
+      ctx.clearRect(0, 0, w, h);
+      animTime += 0.05;
+
+      // 平滑拉鋸位移計算
+      ropePosition += (targetRopePos - ropePosition) * 0.08;
+
+      // 1. 繪製背景操場地面
+      const groundY = h * 0.76;
+      const gradient = ctx.createLinearGradient(0, groundY - 20, 0, h);
+      gradient.addColorStop(0, '#1e293b');
+      gradient.addColorStop(1, '#0f172a');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, groundY, w, h - groundY);
+
+      // 操場跑道線
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(0, groundY + 12);
+      ctx.lineTo(w, groundY + 12);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 2. 拔河決勝界線標示
+      const centerX = w / 2;
+      const winDist = w * 0.28; // 超過此距離即判定拔河大勝
+
+      // 中線與左右警戒線
+      ctx.lineWidth = 3;
+      // 藍方勝線
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(centerX - winDist, groundY - 30);
+      ctx.lineTo(centerX - winDist, groundY + 30);
+      ctx.stroke();
+
+      // 紅方勝線
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(centerX + winDist, groundY - 30);
+      ctx.lineTo(centerX + winDist, groundY + 30);
+      ctx.stroke();
+
+      // 中央基準白線
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(centerX, groundY - 40);
+      ctx.lineTo(centerX, groundY + 25);
+      ctx.stroke();
+
+      // 3. 繪製拔河繩
+      // 繩子實際中心 X 座標隨 ropePosition 位移
+      const ropeOffsetPix = (ropePosition / 100) * winDist;
+      const currentRopeCenterX = centerX + ropeOffsetPix;
+      const ropeY = groundY - 14;
+
+      // 繩子自然緊繃微顫動
+      const wobble = Math.sin(animTime * 12) * 1.5;
+
+      ctx.save();
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(20, ropeY + wobble * 0.5);
+      ctx.lineTo(w - 20, ropeY - wobble * 0.5);
+      ctx.stroke();
+
+      // 繩子紋路質感
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.moveTo(20, ropeY);
+      ctx.lineTo(w - 20, ropeY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // 4. 繩子中央紅絲帶 (標的物)
+      ctx.save();
+      ctx.fillStyle = '#ef4444';
+      ctx.shadowColor = '#dc2626';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(currentRopeCenterX, ropeY, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 紅色彩帶飄帶
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(currentRopeCenterX, ropeY + 4);
+      ctx.quadraticCurveTo(currentRopeCenterX + Math.sin(animTime * 8) * 8, ropeY + 22, currentRopeCenterX + Math.cos(animTime * 6) * 10, ropeY + 36);
+      ctx.stroke();
+      ctx.restore();
+
+      // 5. 繪製藍隊拔河隊員（3人小隊）
+      const leftPull = targetRopePos < ropePosition ? 1 : 0.2;
+      const rightPull = targetRopePos > ropePosition ? 1 : 0.2;
+
+      for (let i = 0; i < 3; i++) {
+        const px = currentRopeCenterX - 65 - (i * 38);
+        drawTugPlayer(ctx, px, ropeY + 12, true, '#0284c7', leftPull);
+      }
+
+      // 6. 繪製紅隊拔河隊員（3人小隊）
+      for (let i = 0; i < 3; i++) {
+        const px = currentRopeCenterX + 65 + (i * 38);
+        drawTugPlayer(ctx, px, ropeY + 12, false, '#e11d48', rightPull);
+      }
+
+      // 7. 更新並繪製爆炸回饋粒子
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.update();
+        p.draw(ctx);
+        if (p.alpha <= 0.05) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // 循環繪製
+      requestAnimationFrame(renderTugGame);
+    }
+  </script>
+
+  <script>
+    // DOM 節點引用
+    const p1QuestionText = document.getElementById('p1QuestionText');
+    const p1OptionsContainer = document.getElementById('p1OptionsContainer');
+    const p1ProgressText = document.getElementById('p1ProgressText');
+    const p1DifficultyBadge = document.getElementById('p1DifficultyBadge');
+    const p1ScoreBadge = document.getElementById('p1ScoreBadge');
+    const p1StreakElem = document.getElementById('p1Streak');
+    const p1FeedbackAnimation = document.getElementById('p1FeedbackAnimation');
+
+    const p2QuestionText = document.getElementById('p2QuestionText');
+    const p2OptionsContainer = document.getElementById('p2OptionsContainer');
+    const p2ProgressText = document.getElementById('p2ProgressText');
+    const p2DifficultyBadge = document.getElementById('p2DifficultyBadge');
+    const p2ScoreBadge = document.getElementById('p2ScoreBadge');
+    const p2StreakElem = document.getElementById('p2Streak');
+    const p2FeedbackAnimation = document.getElementById('p2FeedbackAnimation');
+
+    const matchTension = document.getElementById('matchTension');
+    const victoryModal = document.getElementById('victoryModal');
+    const winnerTitle = document.getElementById('winnerTitle');
+    const winnerDesc = document.getElementById('winnerDesc');
+    const finalP1Score = document.getElementById('finalP1Score');
+    const finalP2Score = document.getElementById('finalP2Score');
+    const modalRestartBtn = document.getElementById('modalRestartBtn');
+    const resetGameBtn = document.getElementById('resetGameBtn');
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const soundIcon = document.getElementById('soundIcon');
+    const soundText = document.getElementById('soundText');
+
+    // 渲染 P1 (藍隊) 當前題目
+    function renderP1Question() {
+      if (p1Index >= questionsP1.length) {
+        p1QuestionText.innerHTML = "🎉 藍隊已完成全部 10 題！等待賽局結束！";
+        p1OptionsContainer.innerHTML = `<div class="col-span-2 text-center py-6 text-sm text-cyan-400 font-bold bg-slate-900/60 rounded-xl border border-cyan-800">全部答題完成！防守中！</div>`;
+        checkGameCompletion();
+        return;
+      }
+
+      const q = questionsP1[p1Index];
+      p1ProgressText.textContent = `第 ${p1Index + 1} / 10 題`;
+      p1DifficultyBadge.textContent = q.badge;
+      p1QuestionText.textContent = q.text;
+      p1OptionsContainer.innerHTML = '';
+
+      q.options.forEach((optText, optIdx) => {
+        const btn = document.createElement('button');
+        btn.className = `option-btn w-full p-2.5 sm:p-3 text-left font-bold text-xs sm:text-sm rounded-xl bg-slate-700/80 hover:bg-cyan-700 text-slate-100 hover:text-white border border-slate-600 hover:border-cyan-400 shadow transition flex items-center gap-2`;
+        btn.innerHTML = `<span class="w-6 h-6 rounded-full bg-slate-900/80 text-cyan-300 border border-cyan-600/50 flex items-center justify-center text-xs flex-shrink-0">${optIdx + 1}</span><span>${optText}</span>`;
+        btn.onclick = () => handleP1Answer(optIdx, btn);
+        p1OptionsContainer.appendChild(btn);
+      });
+    }
+
+    // 渲染 P2 (紅隊) 當前題目
+    function renderP2Question() {
+      if (p2Index >= questionsP2.length) {
+        p2QuestionText.innerHTML = "🎉 紅隊已完成全部 10 題！等待賽局結束！";
+        p2OptionsContainer.innerHTML = `<div class="col-span-2 text-center py-6 text-sm text-rose-400 font-bold bg-slate-900/60 rounded-xl border border-rose-800">全部答題完成！防守中！</div>`;
+        checkGameCompletion();
+        return;
+      }
+
+      const q = questionsP2[p2Index];
+      p2ProgressText.textContent = `第 ${p2Index + 1} / 10 題`;
+      p2DifficultyBadge.textContent = q.badge;
+      p2QuestionText.textContent = q.text;
+      p2OptionsContainer.innerHTML = '';
+
+      q.options.forEach((optText, optIdx) => {
+        const btn = document.createElement('button');
+        btn.className = `option-btn w-full p-2.5 sm:p-3 text-left font-bold text-xs sm:text-sm rounded-xl bg-slate-700/80 hover:bg-rose-700 text-slate-100 hover:text-white border border-slate-600 hover:border-rose-400 shadow transition flex items-center gap-2`;
+        btn.innerHTML = `<span class="w-6 h-6 rounded-full bg-slate-900/80 text-rose-300 border border-rose-600/50 flex items-center justify-center text-xs flex-shrink-0">${optIdx + 1}</span><span>${optText}</span>`;
+        btn.onclick = () => handleP2Answer(optIdx, btn);
+        p2OptionsContainer.appendChild(btn);
+      });
+    }
+
+    // 處理 P1 作答
+    function handleP1Answer(chosenIdx, clickedBtn) {
+      if (isGameOver || p1Index >= questionsP1.length) return;
+      const q = questionsP1[p1Index];
+      const allBtns = p1OptionsContainer.querySelectorAll('button');
+      allBtns.forEach(b => b.disabled = true);
+
+      if (chosenIdx === q.correct) {
+        // 答對
+        playCorrectSound();
+        playPullSound();
+        p1Score++;
+        p1Streak++;
+        p1ScoreBadge.textContent = `${p1Score * 10} 分`;
+        p1StreakElem.textContent = `連對 ${p1Streak} 題 🔥`;
+        
+        // 繩子往左拉 (負值方向)
+        const pullPower = 10 + (p1Streak > 2 ? 4 : 0);
+        targetRopePos = Math.max(-100, targetRopePos - pullPower);
+
+        // 視覺爆發粒子特效在左方隊伍
+        const rect = canvas.getBoundingClientRect();
+        createExplosion(rect.width * 0.35, rect.height * 0.7, '#38bdf8');
+
+        // 按鈕綠色反饋
+        clickedBtn.classList.remove('bg-slate-700/80', 'hover:bg-cyan-700');
+        clickedBtn.classList.add('bg-emerald-600', 'border-emerald-300', 'text-white');
+
+        showFloatingFeedback(p1FeedbackAnimation, "✨ 答對了！強力向左拉！", "text-cyan-300");
+      } else {
+        // 答錯
+        playWrongSound();
+        p1Streak = 0;
+        p1StreakElem.textContent = `連對 0 題`;
+        // 答錯繩子稍往對方滑移
+        targetRopePos = Math.min(100, targetRopePos + 3);
+
+        clickedBtn.classList.remove('bg-slate-700/80');
+        clickedBtn.classList.add('bg-rose-700', 'border-rose-400');
+        showFloatingFeedback(p1FeedbackAnimation, `❌ 答錯囉！答案是：${q.options[q.correct]}`, "text-rose-400");
+      }
+
+      updateTensionDisplay();
+
+      // 檢查是否已觸發直接拔河勝利 (拉過臨界點)
+      if (targetRopePos <= -85) {
+        setTimeout(() => triggerVictory("p1_pull"), 500);
+        return;
+      }
+
+      setTimeout(() => {
+        p1Index++;
+        renderP1Question();
+      }, 900);
+    }
+
+    // 處理 P2 作答
+    function handleP2Answer(chosenIdx, clickedBtn) {
+      if (isGameOver || p2Index >= questionsP2.length) return;
+      const q = questionsP2[p2Index];
+      const allBtns = p2OptionsContainer.querySelectorAll('button');
+      allBtns.forEach(b => b.disabled = true);
+
+      if (chosenIdx === q.correct) {
+        // 答對
+        playCorrectSound();
+        playPullSound();
+        p2Score++;
+        p2Streak++;
+        p2ScoreBadge.textContent = `${p2Score * 10} 分`;
+        p2StreakElem.textContent = `連對 ${p2Streak} 題 🔥`;
+
+        // 繩子往右拉 (正值方向)
+        const pullPower = 10 + (p2Streak > 2 ? 4 : 0);
+        targetRopePos = Math.min(100, targetRopePos + pullPower);
+
+        // 視覺爆發粒子特效在右方隊伍
+        const rect = canvas.getBoundingClientRect();
+        createExplosion(rect.width * 0.65, rect.height * 0.7, '#fb7185');
+
+        // 按鈕綠色反饋
+        clickedBtn.classList.remove('bg-slate-700/80', 'hover:bg-rose-700');
+        clickedBtn.classList.add('bg-emerald-600', 'border-emerald-300', 'text-white');
+
+        showFloatingFeedback(p2FeedbackAnimation, "✨ 答對了！全力向右拉！", "text-rose-300");
+      } else {
+        // 答錯
+        playWrongSound();
+        p2Streak = 0;
+        p2StreakElem.textContent = `連對 0 題`;
+        // 答錯繩子稍往藍隊滑移
+        targetRopePos = Math.max(-100, targetRopePos - 3);
+
+        clickedBtn.classList.remove('bg-slate-700/80');
+        clickedBtn.classList.add('bg-rose-700', 'border-rose-400');
+        showFloatingFeedback(p2FeedbackAnimation, `❌ 答錯囉！答案是：${q.options[q.correct]}`, "text-rose-400");
+      }
+
+      updateTensionDisplay();
+
+      // 檢查是否已觸發直接拔河勝利 (拉過臨界點)
+      if (targetRopePos >= 85) {
+        setTimeout(() => triggerVictory("p2_pull"), 500);
+        return;
+      }
+
+      setTimeout(() => {
+        p2Index++;
+        renderP2Question();
+      }, 900);
+    }
+
+    // 顯示卡片文字回饋
+    function showFloatingFeedback(elem, text, colorClass) {
+      elem.textContent = text;
+      elem.className = `absolute inset-0 bg-slate-950/85 pointer-events-none transition-opacity duration-200 flex items-center justify-center text-center p-3 text-sm sm:text-base font-black ${colorClass} opacity-100 z-20`;
+      setTimeout(() => {
+        elem.classList.remove('opacity-100');
+        elem.classList.add('opacity-0');
+      }, 750);
+    }
+
+    // 更新拔河標線文字說明
+    function updateTensionDisplay() {
+      if (targetRopePos < -45) {
+        matchTension.innerHTML = `<span class="text-cyan-400 font-bold">⚡ 藍隊大幅領先！</span>`;
+      } else if (targetRopePos > 45) {
+        matchTension.innerHTML = `<span class="text-rose-400 font-bold">⚡ 紅隊大幅領先！</span>`;
+      } else {
+        matchTension.innerHTML = `<span>雙方僵持不下</span>`;
+      }
+    }
+
+    // 檢查雙方是否都已完成 10 題
+    function checkGameCompletion() {
+      if (p1Index >= questionsP1.length && p2Index >= questionsP2.length) {
+        setTimeout(() => {
+          if (targetRopePos < -5) {
+            triggerVictory("p1");
+          } else if (targetRopePos > 5) {
+            triggerVictory("p2");
+          } else {
+            // 平手或看分數
+            if (p1Score > p2Score) triggerVictory("p1");
+            else if (p2Score > p1Score) triggerVictory("p2");
+            else triggerVictory("draw");
+          }
+        }, 800);
+      }
+    }
+
+    // 觸發結算勝利彈窗
+    function triggerVictory(winnerCode) {
+      if (isGameOver) return;
+      isGameOver = true;
+      playVictoryFanfare();
+
+      finalP1Score.textContent = `${p1Score} / 10 題 (${p1Score * 10} 分)`;
+      finalP2Score.textContent = `${p2Score} / 10 題 (${p2Score * 10} 分)`;
+
+      if (winnerCode === 'p1' || winnerCode === 'p1_pull') {
+        winnerTitle.textContent = "🏆 藍隊勇奪勝利！力拔山河！";
+        winnerTitle.className = "text-2xl sm:text-3xl font-black text-cyan-400 mb-1";
+        winnerDesc.textContent = "恭喜藍隊！憑藉出色的五大地形知識，將紅隊完全拉入陣地！";
+      } else if (winnerCode === 'p2' || winnerCode === 'p2_pull') {
+        winnerTitle.textContent = "🏆 紅隊勇奪勝利！勢不可擋！";
+        winnerTitle.className = "text-2xl sm:text-3xl font-black text-rose-400 mb-1";
+        winnerDesc.textContent = "恭喜紅隊！熟練掌握平原、盆地、台地、丘陵與山地，贏得拔河王！";
+      } else {
+        winnerTitle.textContent = "🤝 勢均力敵！雙方平手！";
+        winnerTitle.className = "text-2xl sm:text-3xl font-black text-amber-300 mb-1";
+        winnerDesc.textContent = "兩位都是地形知識大師，實力不分軒輊！";
+      }
+
+      victoryModal.classList.remove('hidden');
+      victoryModal.classList.add('flex');
+    }
+
+    // 重新開始遊戲
+    function resetGame() {
+      isGameOver = false;
+      ropePosition = 0;
+      targetRopePos = 0;
+      particles = [];
+
+      p1Index = 0;
+      p1Score = 0;
+      p1Streak = 0;
+      p1ScoreBadge.textContent = "0 分";
+      p1StreakElem.textContent = "連對 0 題";
+
+      p2Index = 0;
+      p2Score = 0;
+      p2Streak = 0;
+      p2ScoreBadge.textContent = "0 分";
+      p2StreakElem.textContent = "連對 0 題";
+
+      victoryModal.classList.add('hidden');
+      victoryModal.classList.remove('flex');
+      matchTension.textContent = "拔河拉鋸中";
+
+      renderP1Question();
+      renderP2Question();
+    }
+
+    // 音效開關按鈕
+    soundToggleBtn.onclick = () => {
+      soundEnabled = !soundEnabled;
+      soundIcon.textContent = soundEnabled ? "🔊" : "🔇";
+      soundText.textContent = soundEnabled ? "音效開" : "靜音";
+      if (soundEnabled) initAudio();
+    };
+
+    resetGameBtn.onclick = resetGame;
+    modalRestartBtn.onclick = resetGame;
+
+    // 初始化啟動
+    window.addEventListener('DOMContentLoaded', () => {
+      resizeCanvas();
+      renderP1Question();
+      renderP2Question();
+      requestAnimationFrame(renderTugGame);
+    });
+  </script>
+</body>
+</html>
